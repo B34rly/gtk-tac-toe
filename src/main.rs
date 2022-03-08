@@ -1,8 +1,6 @@
-use gtk::glib::clone::Downgrade;
 use gtk::{prelude::*, Label};
 use gtk::{Align, Application, ApplicationWindow, Button, Grid};
 use gtk4 as gtk;
-use std::borrow::BorrowMut;
 use std::cell::Cell;
 use std::rc::Rc;
 
@@ -44,7 +42,7 @@ fn build_ui(app: &gtk::Application) {
     ]);
     let xturn = Rc::new(Cell::new(true));
     let game_done = Rc::new(Cell::new(false));
-    let text = Rc::new( Label::builder().label("It's X's turn!").build());
+    let text = Rc::new(Label::builder().label("It's X's turn!").build());
 
     for i in 0..3 {
         for o in 0..3 {
@@ -64,64 +62,81 @@ fn build_ui(app: &gtk::Application) {
             );
 
             current_button.connect_clicked(move |current_button| {
-                
-                    if current_button.label().unwrap() == "" {
-                        if xturn.get() {
-                            current_button.set_label("X");
-                            text.set_label("It's O's turn!");
-                        } else {
-                            current_button.set_label("O");
-                            text.set_label("It's X's turn!");
-                        };
-                        for i in 0..3 {
-                            if game_grid[i][0].label().unwrap() != ""
-                                && game_grid[i][0].label() == game_grid[i][1].label()
-                                && game_grid[i][1].label() == game_grid[i][2].label()
-                            {
-                                println!("game done! {}", if xturn.get() { "X" } else { "O" });
-                                game_done.set(true);
-                            }
-                            if game_grid[0][i].label().unwrap() != ""
-                                && game_grid[0][i].label() == game_grid[1][i].label()
-                                && game_grid[1][i].label() == game_grid[2][i].label()
-                            {
-                                println!("game done! {}", if xturn.get() { "X" } else { "O" });
-                                game_done.set(true);
-                            }
-                        }
-                        if game_grid[1][1].label().unwrap() != ""
-                            && game_grid[0][0].label() == game_grid[1][1].label()
-                            && game_grid[1][1].label() == game_grid[2][2].label()
-                        {
-                            println!("game done! {}", if xturn.get() { "X" } else { "O" });
-                            game_done.set(true);
-                        }
-                        if game_grid[1][1].label().unwrap() != ""
-                            && game_grid[0][2].label() == game_grid[1][1].label()
-                            && game_grid[1][1].label() == game_grid[2][0].label()
-                        {
-                            println!("game done! {}", if xturn.get() { "X" } else { "O" });
-                            game_done.set(true);
-                        }
-                        xturn.set(!xturn.get());
+                let mut tie: bool = false;
+                if current_button.label().unwrap() == "" {
+                    if xturn.get() {
+                        current_button.set_label("X");
+                        text.set_label("It's O's turn!");
                     } else {
-                        println!("This spot is taken! Go Again.");
+                        current_button.set_label("O");
+                        text.set_label("It's X's turn!");
+                    };
+                    for i in 0..3 {
+                        if game_grid[i][0].label().unwrap() != ""
+                            && game_grid[i][0].label() == game_grid[i][1].label()
+                            && game_grid[i][1].label() == game_grid[i][2].label()
+                        {
+                            println!("game done! {}", if xturn.get() { "X" } else { "O" });
+                            game_done.set(true);
+                        }
+                        if game_grid[0][i].label().unwrap() != ""
+                            && game_grid[0][i].label() == game_grid[1][i].label()
+                            && game_grid[1][i].label() == game_grid[2][i].label()
+                        {
+                            println!("game done! {}", if xturn.get() { "X" } else { "O" });
+                            game_done.set(true);
+                        }
                     }
-                if game_done.get(){
-                    for i in 0..3{
+                    if game_grid[1][1].label().unwrap() != ""
+                        && game_grid[0][0].label() == game_grid[1][1].label()
+                        && game_grid[1][1].label() == game_grid[2][2].label()
+                    {
+                        println!("game done! {}", if xturn.get() { "X" } else { "O" });
+                        game_done.set(true);
+                    }
+                    if game_grid[1][1].label().unwrap() != ""
+                        && game_grid[0][2].label() == game_grid[1][1].label()
+                        && game_grid[1][1].label() == game_grid[2][0].label()
+                    {
+                        println!("game done! {}", if xturn.get() { "X" } else { "O" });
+                        game_done.set(true);
+                    }
+                    xturn.set(!xturn.get());
+                } else {
+                    println!("This spot is taken! Go Again.");
+                }
+                'outerer: loop {
+                    for i in 0..3 {
+                        for o in 0..3 {
+                            if game_grid[i][o].label().unwrap() == "" {
+                                break 'outerer;
+                            }
+                        }
+                    }
+                    tie = true;
+                    game_done.set(true);
+                    break 'outerer;
+                }
+                if game_done.get() {
+                    for i in 0..3 {
                         for o in 0..3 {
                             game_grid[i][o].set_sensitive(false);
                         }
                     }
-                    text.set_label(&(format!("Game over! {} won!", if xturn.get(){"O"}else{"X"})));
+                    if tie {
+                        text.set_label("It's a tie!")
+                    } else {
+                        text.set_label(
+                            &(format!("Game over! {} won!", if xturn.get() { "O" } else { "X" })),
+                        );
+                    }
                 }
             });
         }
     }
 
-
-    grid.attach(text.as_ref(), 0, 4, 3, 1); // move these into button closurue to ensure that it runs 
-    //and text changes, idk how it changed before but know it's not
+    grid.attach(text.as_ref(), 0, 4, 3, 1); // move these into button closurue to ensure that it runs
+                                            //and text changes, idk how it changed before but know it's not
 
     let reset_button = Button::builder()
         .halign(Align::Center)
@@ -143,7 +158,6 @@ fn build_ui(app: &gtk::Application) {
     grid.attach(&reset_button, 0, 3, 3, 1);
 
     window.show();
-    
 }
 
 fn new_game_button() -> Button {
